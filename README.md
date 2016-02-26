@@ -2,7 +2,8 @@
 
 Changelog :
 
-> Imported file "appIdSessionstore.c" in fw_appid.c from same folder 
+> Imported file "appIdSessionstore.c" in "fw_appid.c" from same folder
+
 > Report file is generated in "/usr/report.txt". You can change the path in fw_appid.c[line# 2156]
 
 

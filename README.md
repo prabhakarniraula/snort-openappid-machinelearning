@@ -6,5 +6,7 @@ Changelog :
 > Report file is generated in "/usr/report.txt". You can change the path in fw_appid.c[line# 2156]
 
 
-To see log output of the sessions : ./runsnort.sh 1>output.txt
+To see log output of the sessions : 
+
+> ./runsnort.sh 1>output.txt
 

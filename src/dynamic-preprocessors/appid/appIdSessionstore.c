@@ -5,8 +5,9 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<stdio.h>
+#include "sort.c"
 
-
+#define MAX_REQUESTS_FOR_DT 10
 /*
 	AVL Tree to access socketpair by sessid
 */
@@ -656,10 +657,19 @@ int isNull()
 struct hash *hashTable = NULL;
 uint32_t eleCount ;
  
-struct node 
+struct node
 {
     uint32_t ip1, ip2;
-    uint16_t p1, p2,sessid,total_packets;
+	
+    uint16_t p1, p2;
+    uint16_t whichIsSource; //0 for ip1,p1 or 1 otherwise
+    double reqPacketAvg, resPacketAvg;
+    double reqPayloadAvg,resPayloadAvg;
+    uint16_t reqCount, resCount;
+    uint8_t reqOptions[MAX_REQUESTS_FOR_DT][10];
+    uint8_t resOptions[MAX_REQUESTS_FOR_DT][10];
+
+    uint16_t sessid,total_packets;
     uint32_t total_bytes;
     struct node *next;
 };
@@ -695,7 +705,7 @@ uint32_t isSmaller(uint32_t a, uint32_t b)
 }
 
 
-struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, uint16_t sessid, uint32_t payload_size) 
+struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, uint16_t sessid, SFSnortPacket *p) 
 {
 
     struct node *newnode;
@@ -707,8 +717,11 @@ struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, 
 
 		newnode->p1 = p1;
 		newnode->p2 = p2;
+		
+		newnode->whichIsSource = 0;
+			
 		newnode->sessid = sessid;
-		newnode->total_bytes = payload_size;
+		newnode->total_bytes = p->payload_size;
 		newnode->total_packets = 1;
 	}
 	else
@@ -718,16 +731,128 @@ struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, 
 
 		newnode->p1 = p2;
 		newnode->p2 = p1;
+		
+		newnode->whichIsSource = 1;
+
 		newnode->sessid = sessid;
-		newnode->total_bytes = payload_size;
+		newnode->total_bytes = p->payload_size;
 		newnode->total_packets = 1;
 	}
 
+	newnode->reqCount = 1;
+	newnode->resCount = 0;
+	
+	newnode->reqPacketAvg = p->ip4h->ip_len;
+	newnode->reqPayloadAvg =  p->payload_size;
+
+	newnode->resPacketAvg = 0;
+	newnode->resPayloadAvg = 0;
+
+	//options
+
+	uint8_t* opti = newnode->reqOptions[0];
+	if(p->tcp_header != NULL)
+	{
+		TCPOptions *opt=NULL;
+		opt = p->tcp_options;
+		int index;
+		
+		uint8_t tcpoptionscount = p->num_tcp_options;
+		
+		sort(opt,tcpoptionscount);
+
+		if((index=contains(opt,2,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+			opti[0] = *(opt[index]).option_data;
+			//fprintf(fp,"%u,",*(opt[index]).option_data);
+		else
+			opti[0] = 0;
+
+		if((index=contains(opt,3,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+			opti[1] = *(opt[index]).option_data;
+		else
+			opti[1] = 0;
+
+		if((index=contains(opt,4,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+			opti[2] = *(opt[index]).option_data;
+		else
+			opti[2] = 0;
+
+		if((index=contains(opt,5,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+			opti[3] = *(opt[index]).option_data;
+		else
+			opti[3] = 0;
+
+		if((index=contains(opt,6,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+			opti[4] = *(opt[index]).option_data;
+		else
+			opti[4] = 0;
+
+		if((index=contains(opt,7,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+			opti[5] = *(opt[index]).option_data;
+		else
+			opti[5] = 0;
+
+		if((index=contains(opt,8,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+			opti[6] = *(opt[index]).option_data;
+		else
+			opti[6] = 0;
+
+		if((index=contains(opt,17,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+			opti[7] = *(opt[index]).option_data;
+		else
+			opti[7] = 0;
+
+		if((index=contains(opt,18,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+			opti[8] = *(opt[index]).option_data;
+		else
+			opti[8] = 0;
+
+		if((index=contains(opt,19,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+			opti[9] = *(opt[index]).option_data;
+		else
+			opti[9] = 0;
+
+	}
+	else
+	{
+		int loop;
+		for(loop=0;loop<10;loop++)
+			opti[loop]=0;
+	}
 
 
 	//strcpy(newnode->name, name);
     newnode->next = NULL;
     return newnode;
+}
+
+//print all hash to CSV for later training of DT
+printForDT(struct node *s)
+
+{
+	FILE *fpDT = fopen("/usr/dt.txt","a");
+	fprintf(fpDT,"%f,%f,",s->reqPayloadAvg,s->resPayloadAvg);
+	fprintf(fpDT,"%f,%f,",s->reqPacketAvg,s->resPacketAvg);
+		
+	int i,j;
+	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
+	{
+		for(j=0;j<10;j++)
+		{
+			fprintf(fpDT,"%u,",s->reqOptions[i][j]);
+		}
+	}
+	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
+	{
+		for(j=0;j<9;j++) // 9 because print last without comma
+		{
+			fprintf(fpDT,"%u,",s->resOptions[i][j]);
+		}
+	}
+	fprintf(fpDT,"%u",s->resOptions[9][9]);
+		
+	fprintf(fpDT,"\n");
+	fclose(fpDT);
 }
 
 /* find sessid by socketpair in hash */
@@ -790,8 +915,25 @@ void addCumulativeInfo(uint32_t ip1 , uint32_t ip2 , uint16_t p1 , uint16_t p2, 
 
 }
 
+/*check if packet is request or response in session*/
+int isRequest(uint32_t ip1, uint16_t p1, struct node *node)
+{
+	if((node->whichIsSource == 0) && (ip1==node->ip1) && (p1==node->p1))
+	{
+		return 1;
+	}
+	else if((node->whichIsSource == 1) && (ip1==node->ip2) && (p1=node->p2))
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
 /* checks if socket pairs are avl in hash */
-int searchInHash(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2)
+struct node * searchInHash(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2)
 {
 
 
@@ -812,39 +954,41 @@ int searchInHash(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2)
     uint32_t hashIndex = getIndex(ip1, ip2, p1, p2), flag = 0;
     struct node *myNode=NULL;
     myNode = hashTable[hashIndex].head;
-    if (!myNode) {
+    if (!myNode) 
+    {
        // printf("Search element unavailable in hash table\n");
-        return 0;
+        return NULL;
     }
     while (myNode != NULL) {
 		if (myNode->ip1 == ip1 && myNode->ip2 == ip2 &&
 			myNode->p1 == p1 && myNode->p2 == p2)
 		{
-            flag = 1;
-            break;
-        }
+		    flag = 1;
+		    break;
+        	}
         myNode = myNode->next;
     }
 	if (!flag)
 	{
-		return 0;
+		return NULL;
 	}
-    return 1;
+    return myNode;
 }
  
  
-AVLTree_Node* insertToHash(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, uint16_t sessid,uint32_t payload_size, AVLTree_Node *root)
+AVLTree_Node* insertToHash(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, uint16_t sessid,SFSnortPacket *p, AVLTree_Node *root)
 {
 	AVLTree_Node *temp=NULL;
-	if (searchInHash(ip1, ip2, p1, p2) == 1)
+	if (searchInHash(ip1, ip2, p1, p2) != NULL)
 	{
 		//printf("\n\nALready %u ",sessid);
 		return NULL;
 	}
 	uint32_t hashIndex = getIndex(ip1, ip2, p1, p2);
-    struct node *newnode = createhNode(ip1, ip2, p1, p2,sessid,payload_size);
+    struct node *newnode = createhNode(ip1, ip2, p1, p2,sessid,p);
     /* head of list for the bucket with index "hashIndex" */
-    if (!hashTable[hashIndex].head) {
+    if (!hashTable[hashIndex].head) 
+{
         hashTable[hashIndex].head = newnode;
 	temp=insertion(root,sessid,newnode);
 	//if(root == NULL)
@@ -943,7 +1087,7 @@ void display()
         if (!myNode)
             continue;
         printf("\nData at index %u in Hash Table:\n", i);
-        printf("ip1     p1          ip2           p2           sessid           total_bytes            packet_count\n");
+        printf("ip1     p1          ip2           p2           sessid           packet_count            payload\n");
         printf("------------------------------------------------------------------------------------------------------------------\n");
         while (myNode != NULL) {
             printf("%u             ", myNode->ip1);
@@ -951,8 +1095,8 @@ void display()
             printf("%u             ", myNode->ip2);
             printf("%u             ", myNode->p2);
             printf("%u             ", myNode->sessid);
-            printf("%u             ", myNode->total_bytes);
-	    printf("%u             \n", myNode->total_packets);
+            printf("%u             ", myNode->total_packets);
+	    printf("%u            \n", myNode->total_bytes);
 		
             myNode = myNode->next;
         }

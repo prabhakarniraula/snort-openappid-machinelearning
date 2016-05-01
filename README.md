@@ -8,6 +8,8 @@ Changelog :
 
 > Sessions are captured in file "/usr/session.txt".
 
+> Training dataset for Decision tree is in "/usr/dt.txt".
+
 > Structure chart is in "diagrams" folder
 
 > PCAP file is in "test" folder

@@ -14,8 +14,3 @@ Changelog :
 
 > PCAP file is in "test" folder
 
-
-To see log output of the sessions : 
-
-> ./runsnort.sh 1>output.txt
-

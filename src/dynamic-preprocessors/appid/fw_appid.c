@@ -64,6 +64,7 @@
 /*tanmay*/
 
 #include "appIdSessionstore.c"
+//#include "sort.c"
 #include<errno.h>
 /*end of tanmay*/
 
@@ -2084,44 +2085,21 @@ const char* getField(char *line, int num)
 	return NULL;
 	
 }
-
+uint32_t conv(char ip[])
+{
+	uint32_t num=0,val;
+	char *tok,*ptr;
+	tok=strtok(ip,".");
+	while(tok!=NULL)
+	{
+		val=strtoul(tok,&ptr,0);
+		num=(num<<8)+val;
+		tok=strtok(NULL,".");
+	}
+	return num;
+}
 /* tanmay*/
 
-void sort(TCPOptions array[],int size)
-{
- 
-	int c, d;
-	TCPOptions t;
-	for (c = 1; c <= size - 1; c++) 
-	{
-		d = c;
-
-		while (d > 0 && array[d].option_code < array[d - 1].option_code) 
-		{
-			t = array[d];
-			array[d] = array[d - 1];
-			array[d - 1] = t;
-
-			d--;
-		}
-	}
-}
-
-int contains(TCPOptions array[], uint8_t element, int size)
-{
-	int i=0;
-	for(i=0;i<size;i++)
-	{
-		if(array[i].option_code == element)
-		{
-			return i;
-		}
-	}	
-	return -1;
-}
-
-
-/*end of tanmay*/
 
 void fwAppIdSearch(SFSnortPacket *p)
 {
@@ -2154,9 +2132,10 @@ UDPHeader *udpHead = (UDPHeader *)p->udp_header;
 FILE *fp;
 
 fp = fopen("/usr/report.txt","a");
-sfaddr_t *ipsource;
-sfaddr_t *ipdst;
-TCPOptions *opt;
+sfaddr_t *ipsource1=NULL;
+sfaddr_t *ipdst1=NULL;
+uint32_t ipsource, ipdst;
+TCPOptions *opt=NULL;
 int index,f_tcp=0,f_udp=0;	
 AVLTree_Node *root1=NULL;	
 uint32_t payload_size;
@@ -2164,19 +2143,22 @@ uint32_t payload_size;
 if(head != NULL)
 {
 	
-	ipsource = &((IPAddresses *)head->ip_addrs)->ip_src;
-	ipdst = &((IPAddresses *)head->ip_addrs)->ip_dst;
-
+	ipsource1 = &((IPAddresses *)head->ip_addrs)->ip_src;
+	ipdst1 = &((IPAddresses *)head->ip_addrs)->ip_dst;
+		
+	//printf("\nSource: %u, Dest: %u",ipsource1,ipdst1);
 	char srcip[INET6_ADDRSTRLEN];
 	char dstip[INET6_ADDRSTRLEN];
 
 	srcip[0] = 0;
     	
-	inet_ntop(sfaddr_family(ipsource), (void *)sfaddr_get_ptr(ipsource), srcip, sizeof(srcip));
+	inet_ntop(sfaddr_family(ipsource1), (void *)sfaddr_get_ptr(ipsource1), srcip, sizeof(srcip));
 	dstip[0] = 0;
 
-    	inet_ntop(sfaddr_family(ipdst), (void *)sfaddr_get_ptr(ipdst), dstip, sizeof(dstip));
-
+    	inet_ntop(sfaddr_family(ipdst1), (void *)sfaddr_get_ptr(ipdst1), dstip, sizeof(dstip));
+	ipsource = conv(srcip);
+	ipdst = conv(dstip);
+	
 	uint8_t ipver = head->ip_verhl >> 4;
 	uint8_t iphl = (head->ip_verhl & 15)*4;
 	uint8_t iptos = head->ip_tos;
@@ -2276,6 +2258,7 @@ else
 }
 
 uint16_t sport, dport;
+uint8_t tcpoptionscount;
 if(tcpHead != NULL || udpHead != NULL)
 {
 	if(tcpHead != NULL)
@@ -2291,7 +2274,7 @@ if(tcpHead != NULL || udpHead != NULL)
 		uint16_t check = ntohs(tcpHead->checksum);
 		uint16_t urgent = tcpHead->urgent_pointer;
 
-		uint8_t tcpoptionscount = p->num_tcp_options;
+		tcpoptionscount = p->num_tcp_options;
 	
 		payload_size = payload_size - TCP_HDR_LEN ;  
 
@@ -2409,18 +2392,199 @@ else
 fprintf(fp,"\n");
 fclose(fp);
 
+/**session**/
+
 initializeHash(500);
+fp = fopen("/usr/session.txt","a");
+struct node *s;
+uint8_t count;
+uint8_t *opti;
 
 if(f_tcp || f_udp)
 {
-	if(searchInHash((ipsource),(ipdst),sport,dport))
+
+	//printf("\nPacket encount ::  Source IP : %u Source Port :%u  Destination IP : %u  Destination Port : %u",ipsource,sport,ipdst,dport);
+	if(s=searchInHash((ipsource),(ipdst),sport,dport))
 	{
 	
 		
 		uint16_t sessid =(sessidInHash(ipsource,ipdst,sport,dport));
 		refer(sessid);
-		addCumulativeInfo(ipsource,ipdst,sport,dport,payload_size);
-	   	printf("\n\nSession found ::  Source IP : %u Source Port :%u  Destination IP : %u  Destination Port : %u  Sessid : %u Payload: %u ",ipsource,sport,ipdst,dport,sessid,payload_size);           //add cumulative info
+		//addCumulativeInfo(ipsource,ipdst,sport,dport,payload_size);
+	   	fprintf(fp,"\n\nSession found ::  Source IP : %u Source Port :%u  Destination IP : %u  Destination Port : %u  Sessid : %u Payload: %u ",ipsource,sport,ipdst,dport,sessid,payload_size);           //add cumulative info
+if(isRequest(ipsource,sport,s))
+		{
+				//printf("\nisRequest!!!!\n");
+			count = s->reqCount;
+			opti = s->reqOptions[count];
+			if(count ==10 && s->resCount==10)
+			{
+				//print for DT
+				//printf("\n20 packets sip: %u, dip: %u, sport: %u, dport: %u",ipsource,ipdst,sport,dport);
+				s->reqCount = -1; //-1 means already passed to tree and no need to process it Anymore
+				s->resCount = -1;
+				printForDT(s);
+			}
+			else if(count < 10 && count!=-1)
+			{
+				//printf("\nstop coming here!!!");
+				if(f_tcp)
+				{
+					opt = p->tcp_options;
+					sort(opt,tcpoptionscount);
+
+					if((index=contains(opt,2,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[0] = *(opt[index]).option_data;
+						//fprintf(fp,"%u,",*(opt[index]).option_data);
+					else
+						opti[0] = 0;
+
+					if((index=contains(opt,3,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[1] = *(opt[index]).option_data;
+					else
+						opti[1] = 0;
+
+					if((index=contains(opt,4,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[2] = *(opt[index]).option_data;
+					else
+						opti[2] = 0;
+
+					if((index=contains(opt,5,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[3] = *(opt[index]).option_data;
+					else
+						opti[3] = 0;
+
+					if((index=contains(opt,6,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[4] = *(opt[index]).option_data;
+					else
+						opti[4] = 0;
+
+					if((index=contains(opt,7,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[5] = *(opt[index]).option_data;
+					else
+						opti[5] = 0;
+
+					if((index=contains(opt,8,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[6] = *(opt[index]).option_data;
+					else
+						opti[6] = 0;
+
+					if((index=contains(opt,17,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[7] = *(opt[index]).option_data;
+					else
+						opti[7] = 0;
+
+					if((index=contains(opt,18,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[8] = *(opt[index]).option_data;
+					else
+						opti[8] = 0;
+
+					if((index=contains(opt,19,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[9] = *(opt[index]).option_data;
+					else
+						opti[9] = 0;
+
+				}
+				else
+				{
+					int loop;
+					for(loop=0;loop<MAX_REQUESTS_FOR_DT;loop++)
+						opti[loop]=0;
+				}
+				//printf("\n%f ",s->reqPayloadAvg*count);
+				s->reqPayloadAvg = (double)(((double)(s->reqPayloadAvg)*(double)count) + (double)p->payload_size)/((double)(count+1));
+				s->reqPacketAvg = (double)(((double)(s->reqPacketAvg)*(double)count) + (double)p->ip4h->ip_len)/((double)(count+1));
+							//(((s->reqPayloadAvg)*count) + (p->payload_size))/(count+1);
+				//printf("+ %u = %f\n",p->payload_size,s->reqPayloadAvg);
+				s->reqCount++;
+			}
+			
+			
+		}
+		else
+		{
+				//printf("\nisResponse!!!!\n");
+			count = s->resCount;
+			opti = s->resOptions[count];
+			if(count ==10 && s->reqCount==10)
+			{
+				//print
+				//printf("\n20 packets sip: %u, dip: %u, sport: %u, dport: %u",ipsource,ipdst,sport,dport);
+				s->resCount = -1; //-1 means already passed to tree and no need to process it Anymore
+				s->reqCount = -1;
+				printForDT(s);
+			}
+			else if(count < 10 && count!=-1)
+			{
+				if(f_tcp)
+				{
+					opt = p->tcp_options;
+					sort(opt,tcpoptionscount);
+
+					if((index=contains(opt,2,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[0] = *(opt[index]).option_data;
+						//fprintf(fp,"%u,",*(opt[index]).option_data);
+					else
+						opti[0] = 0;
+
+					if((index=contains(opt,3,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[1] = *(opt[index]).option_data;
+					else
+						opti[1] = 0;
+
+					if((index=contains(opt,4,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[2] = *(opt[index]).option_data;
+					else
+						opti[2] = 0;
+
+					if((index=contains(opt,5,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[3] = *(opt[index]).option_data;
+					else
+						opti[3] = 0;
+
+					if((index=contains(opt,6,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[4] = *(opt[index]).option_data;
+					else
+						opti[4] = 0;
+
+					if((index=contains(opt,7,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[5] = *(opt[index]).option_data;
+					else
+						opti[5] = 0;
+
+					if((index=contains(opt,8,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[6] = *(opt[index]).option_data;
+					else
+						opti[6] = 0;
+
+					if((index=contains(opt,17,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[7] = *(opt[index]).option_data;
+					else
+						opti[7] = 0;
+
+					if((index=contains(opt,18,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[8] = *(opt[index]).option_data;
+					else
+						opti[8] = 0;
+
+					if((index=contains(opt,19,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[9] = *(opt[index]).option_data;
+					else
+						opti[9] = 0;
+
+				}
+				else
+				{
+					int loop;
+					for(loop=0;loop<MAX_REQUESTS_FOR_DT;loop++)
+						opti[loop]=0;
+				}
+				s->resPayloadAvg = (double)(((double)(s->resPayloadAvg)*(double)count) + (double)p->payload_size)/((double)(count+1));
+				s->resPacketAvg = (double)(((double)(s->resPacketAvg)*(double)count) + (double)p->ip4h->ip_len)/((double)(count+1));
+							//(s->resPayloadAvg + p->payload_size);
+				s->resCount++;
+			}
+		}
 	
 	}
 	else
@@ -2433,29 +2597,244 @@ if(f_tcp || f_udp)
 			deleteFromHashbySessId(sessid,root1);   //delete from hash
 			root1=deletion(root1,sessid);           // delete from avltree
 
-			printf("\n\nSession deleted : %u ",sessid);
+			fprintf(fp,"\n\nSession deleted : %u ",sessid);
 		        //if sessid is already assigned then it needs to be removed from both avl and hash
 		}
 
-		insertToHash(ipsource,ipdst,sport,dport,sessid,payload_size,root1);
+		insertToHash(ipsource,ipdst,sport,dport,sessid,p,root1);
 		refer(sessid);
 
 
-	   	printf("\n\nSession inserted ::  Source IP : %u Source Port :%u  Destination IP : %u  Destination Port : %u  Sessid : %u Payload: %u ",ipsource,sport,ipdst,dport,sessid,payload_size);           //add cumulative info
+	   	fprintf(fp,"\n\nSession inserted ::  Source IP : %u Source Port :%u  Destination IP : %u  Destination Port : %u  Sessid : %u Payload: %u ",ipsource,sport,ipdst,dport,sessid,payload_size);           //add cumulative info
 	
 	}
+fclose(fp);
 }
 else
 {
-	printf("\n\n Neither TCP nor UDP header found for Source IP : %u Destination IP : %u ",ipsource,ipdst);	
+	fprintf(fp,"\n\n Neither TCP nor UDP header found for Source IP : %u Destination IP : %u ",ipsource,ipdst);	
 
 }
+
+
 
 /*
 	printf("\n\n Hash :");
 	display();
 */
 
+/*****for training tree***/
+/*
+initializeHash(500);
+if(f_tcp || f_udp)
+{
+	struct node *s;
+	uint8_t count;
+	uint8_t *opti;
+	//printf("\n\nPayload size: %u and its %u\n",p->payload_size,sport);
+	if( s=searchInHash((ipsource),(ipdst),sport,dport))
+	{
+		//printf("\nSession Found: %u,%u,%u",s->reqCount,s->resCount,s->sessid);
+			//s=searchInHash((ipsource),(ipdst),sport,dport);
+		if(isRequest(ipsource,sport,s))
+		{
+				//printf("\nisRequest!!!!\n");
+			count = s->reqCount;
+			opti = s->reqOptions[count];
+			if(count ==10 && s->resCount==10)
+			{
+				//print for DT
+				//printf("\n20 packets sip: %u, dip: %u, sport: %u, dport: %u",ipsource,ipdst,sport,dport);
+				s->reqCount = -1; //-1 means already passed to tree and no need to process it Anymore
+				s->resCount = -1;
+				printForDT(s);
+			}
+			else if(count < 10 && count!=-1)
+			{
+				//printf("\nstop coming here!!!");
+				if(f_tcp)
+				{
+					opt = p->tcp_options;
+					sort(opt,tcpoptionscount);
+
+					if((index=contains(opt,2,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[0] = *(opt[index]).option_data;
+						//fprintf(fp,"%u,",*(opt[index]).option_data);
+					else
+						opti[0] = 0;
+
+					if((index=contains(opt,3,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[1] = *(opt[index]).option_data;
+					else
+						opti[1] = 0;
+
+					if((index=contains(opt,4,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[2] = *(opt[index]).option_data;
+					else
+						opti[2] = 0;
+
+					if((index=contains(opt,5,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[3] = *(opt[index]).option_data;
+					else
+						opti[3] = 0;
+
+					if((index=contains(opt,6,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[4] = *(opt[index]).option_data;
+					else
+						opti[4] = 0;
+
+					if((index=contains(opt,7,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[5] = *(opt[index]).option_data;
+					else
+						opti[5] = 0;
+
+					if((index=contains(opt,8,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[6] = *(opt[index]).option_data;
+					else
+						opti[6] = 0;
+
+					if((index=contains(opt,17,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[7] = *(opt[index]).option_data;
+					else
+						opti[7] = 0;
+
+					if((index=contains(opt,18,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[8] = *(opt[index]).option_data;
+					else
+						opti[8] = 0;
+
+					if((index=contains(opt,19,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[9] = *(opt[index]).option_data;
+					else
+						opti[9] = 0;
+
+				}
+				else
+				{
+					int loop;
+					for(loop=0;loop<MAX_REQUESTS_FOR_DT;loop++)
+						opti[loop]=0;
+				}
+				//printf("\n%f ",s->reqPayloadAvg*count);
+				s->reqPayloadAvg = (double)(((double)(s->reqPayloadAvg)*(double)count) + (double)p->payload_size)/((double)(count+1));
+				s->reqPacketAvg = (double)(((double)(s->reqPacketAvg)*(double)count) + (double)p->ip4h->ip_len)/((double)(count+1));
+							//(((s->reqPayloadAvg)*count) + (p->payload_size))/(count+1);
+				//printf("+ %u = %f\n",p->payload_size,s->reqPayloadAvg);
+				s->reqCount++;
+			}
+			
+			
+		}
+		else
+		{
+				//printf("\nisResponse!!!!\n");
+			count = s->resCount;
+			opti = s->resOptions[count];
+			if(count ==10 && s->reqCount==10)
+			{
+				//print
+				//printf("\n20 packets sip: %u, dip: %u, sport: %u, dport: %u",ipsource,ipdst,sport,dport);
+				s->resCount = -1; //-1 means already passed to tree and no need to process it Anymore
+				s->reqCount = -1;
+				printForDT(s);
+			}
+			else if(count < 10 && count!=-1)
+			{
+				if(f_tcp)
+				{
+					opt = p->tcp_options;
+					sort(opt,tcpoptionscount);
+
+					if((index=contains(opt,2,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[0] = *(opt[index]).option_data;
+						//fprintf(fp,"%u,",*(opt[index]).option_data);
+					else
+						opti[0] = 0;
+
+					if((index=contains(opt,3,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[1] = *(opt[index]).option_data;
+					else
+						opti[1] = 0;
+
+					if((index=contains(opt,4,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[2] = *(opt[index]).option_data;
+					else
+						opti[2] = 0;
+
+					if((index=contains(opt,5,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[3] = *(opt[index]).option_data;
+					else
+						opti[3] = 0;
+
+					if((index=contains(opt,6,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[4] = *(opt[index]).option_data;
+					else
+						opti[4] = 0;
+
+					if((index=contains(opt,7,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[5] = *(opt[index]).option_data;
+					else
+						opti[5] = 0;
+
+					if((index=contains(opt,8,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[6] = *(opt[index]).option_data;
+					else
+						opti[6] = 0;
+
+					if((index=contains(opt,17,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[7] = *(opt[index]).option_data;
+					else
+						opti[7] = 0;
+
+					if((index=contains(opt,18,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[8] = *(opt[index]).option_data;
+					else
+						opti[8] = 0;
+
+					if((index=contains(opt,19,tcpoptionscount)) != -1 && (opt[index]).option_data!=NULL)
+						opti[9] = *(opt[index]).option_data;
+					else
+						opti[9] = 0;
+
+				}
+				else
+				{
+					int loop;
+					for(loop=0;loop<MAX_REQUESTS_FOR_DT;loop++)
+						opti[loop]=0;
+				}
+				s->resPayloadAvg = (double)(((double)(s->resPayloadAvg)*(double)count) + (double)p->payload_size)/((double)(count+1));
+				s->resPacketAvg = (double)(((double)(s->resPacketAvg)*(double)count) + (double)p->ip4h->ip_len)/((double)(count+1));
+							//(s->resPayloadAvg + p->payload_size);
+				s->resCount++;
+			}
+		}
+	}
+	else
+	{
+		//create new session
+		uint16_t sessid= (uint16_t)getSessionId();
+
+		if(searchElement(root1,sessid))     
+		{
+			deleteFromHashbySessId(sessid,root1);   //delete from hash
+			root1=deletion(root1,sessid);           // delete from avltree
+
+			//printf("\n\nSession deleted : %u ",sessid);
+		        //if sessid is already assigned then it needs to be removed from both avl and hash
+		}
+
+		insertToHash(ipsource,ipdst,sport,dport,sessid,p,root1);
+		refer(sessid);
+
+
+	   	//printf("\nSession inserted :: sip: %u, dip: %u, sport: %u, dport: %u",ipsource,ipdst,sport,dport);           //add cumulative info
+	
+	}
+
+
+}
+*/
 /*tanmay end*/
 
     if (!p->stream_session)

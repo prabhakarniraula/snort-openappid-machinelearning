@@ -623,7 +623,7 @@ uint16_t getSessionId()
 		}
 		else
 		{
-			if(dsess_id>MAX)
+			if(dsess_id>=MAX)
 			{
 				dsess_id=0;
 			}
@@ -827,31 +827,41 @@ struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, 
 }
 
 //print all hash to CSV for later training of DT
+int appId = 1;
 printForDT(struct node *s)
 
 {
+	//int count = 0;
 	FILE *fpDT = fopen("/usr/dt.txt","a");
-	fprintf(fpDT,"%f,%f,",s->reqPayloadAvg,s->resPayloadAvg);
-	fprintf(fpDT,"%f,%f,",s->reqPacketAvg,s->resPacketAvg);
+	fprintf(fpDT,"%f, %f, ",s->reqPayloadAvg,s->resPayloadAvg);			//count+=2;
+	fprintf(fpDT,"%f, %f, ",s->reqPacketAvg,s->resPacketAvg);				//count+=2;
 		
 	int i,j;
 	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
 	{
 		for(j=0;j<10;j++)
 		{
-			fprintf(fpDT,"%u,",s->reqOptions[i][j]);
+			fprintf(fpDT,"%u, ",s->reqOptions[i][j]);			//count++;
 		}
 	}
-	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
+	for(i=0;i<MAX_REQUESTS_FOR_DT-1;i++)
 	{
-		for(j=0;j<9;j++) // 9 because print last without comma
+		for(j=0;j<10;j++) // 9 because print last without comma
 		{
-			fprintf(fpDT,"%u,",s->resOptions[i][j]);
+			fprintf(fpDT,"%u, ",s->resOptions[i][j]);			//count++;
 		}
 	}
-	fprintf(fpDT,"%u",s->resOptions[9][9]);
-		
-	fprintf(fpDT,"\n");
+	for(j=0;j<9;j++)
+	{
+		fprintf(fpDT,"%u, ",s->resOptions[9][j]);					//count++;
+	}
+	fprintf(fpDT,"%u, ",s->resOptions[9][9]);						//count++;	
+	
+	
+	//printf("HERE -_-");
+	//printf("%d",count);	
+	fprintf(fpDT,"app%d\n",appId);
+	appId++;
 	fclose(fpDT);
 }
 
@@ -990,11 +1000,11 @@ AVLTree_Node* insertToHash(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2,
     if (!hashTable[hashIndex].head) 
 {
         hashTable[hashIndex].head = newnode;
-	temp=insertion(root,sessid,newnode);
+	root=insertion(root,sessid,newnode);
 	//if(root == NULL)
 	//	printf("\nInsertion gives NULL");   // appid_sessionstore
         hashTable[hashIndex].count = 1;
-        return temp;
+        return root;
     }
     /* adding new node to the list */
     newnode->next = (hashTable[hashIndex].head);
@@ -1003,10 +1013,10 @@ AVLTree_Node* insertToHash(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2,
      * nodes in the current bucket
      */
     hashTable[hashIndex].head = newnode;
-    temp=insertion(root,sessid,newnode);
+    root=insertion(root,sessid,newnode);
     hashTable[hashIndex].count++;
 
-    return temp;
+    return root;
 }
  
 void deleteFromHash(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2) 
@@ -1087,7 +1097,7 @@ void display()
         if (!myNode)
             continue;
         printf("\nData at index %u in Hash Table:\n", i);
-        printf("ip1     p1          ip2           p2           sessid           packet_count            payload\n");
+        printf("ip1     p1          ip2           p2           sessid           packet_count            which\n");
         printf("------------------------------------------------------------------------------------------------------------------\n");
         while (myNode != NULL) {
             printf("%u             ", myNode->ip1);
@@ -1095,8 +1105,8 @@ void display()
             printf("%u             ", myNode->ip2);
             printf("%u             ", myNode->p2);
             printf("%u             ", myNode->sessid);
-            printf("%u             ", myNode->total_packets);
-	    printf("%u            \n", myNode->total_bytes);
+            printf("%u             ", myNode->total_packets); 
+	    printf("%u            \n", myNode->whichIsSource);
 		
             myNode = myNode->next;
         }
@@ -1114,8 +1124,8 @@ void displayNode(struct node *myNode)
             printf("%u             ", myNode->ip2);
             printf("%u             ", myNode->p2);
             printf("%u             ", myNode->sessid);
-            printf("%u             ", myNode->total_bytes);
-	    printf("%u             \n", myNode->total_packets);
+          //  printf("%u             ", myNode->payload);
+	  //  printf("%u             \n", myNode->total_packets);
 }
 void initializeHash(uint16_t n)
 {

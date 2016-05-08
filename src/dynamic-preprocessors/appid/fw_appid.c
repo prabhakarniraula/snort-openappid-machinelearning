@@ -2625,10 +2625,10 @@ else
 
 fclose(fp);
 
-
+/*
 	printf("\n\n Hash :");
 	display();
-
+*/
 
 /*****for training tree***/
 /*

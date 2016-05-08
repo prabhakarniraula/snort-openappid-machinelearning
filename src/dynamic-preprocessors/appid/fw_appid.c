@@ -2099,7 +2099,7 @@ uint32_t conv(char ip[])
 	return num;
 }
 /* tanmay*/
-
+AVLTree_Node *root1=NULL;
 
 void fwAppIdSearch(SFSnortPacket *p)
 {
@@ -2137,7 +2137,7 @@ sfaddr_t *ipdst1=NULL;
 uint32_t ipsource, ipdst;
 TCPOptions *opt=NULL;
 int index,f_tcp=0,f_udp=0;	
-AVLTree_Node *root1=NULL;	
+	
 uint32_t payload_size;
  
 if(head != NULL)
@@ -2150,14 +2150,20 @@ if(head != NULL)
 	char srcip[INET6_ADDRSTRLEN];
 	char dstip[INET6_ADDRSTRLEN];
 
+	char srcipTemp[INET6_ADDRSTRLEN];
+	char dstipTemp[INET6_ADDRSTRLEN];
+
+
 	srcip[0] = 0;
     	
 	inet_ntop(sfaddr_family(ipsource1), (void *)sfaddr_get_ptr(ipsource1), srcip, sizeof(srcip));
 	dstip[0] = 0;
 
     	inet_ntop(sfaddr_family(ipdst1), (void *)sfaddr_get_ptr(ipdst1), dstip, sizeof(dstip));
-	ipsource = conv(srcip);
-	ipdst = conv(dstip);
+	strcpy(srcipTemp,srcip);
+	strcpy(dstipTemp,dstip);
+	ipsource = conv(srcipTemp);
+	ipdst = conv(dstipTemp);
 	
 	uint8_t ipver = head->ip_verhl >> 4;
 	uint8_t iphl = (head->ip_verhl & 15)*4;
@@ -2386,7 +2392,7 @@ if(tcpHead != NULL || udpHead != NULL)
 }
 else
 {
-	//TCP UDP +1 empty commas 25
+	//TCP UDP +1 empty commas 25  
 	fprintf(fp,",,,,,,,,,,,,,,,,,,,,,,,,,");
 }
 fprintf(fp,"\n");
@@ -2400,7 +2406,7 @@ struct node *s;
 uint8_t count;
 uint8_t *opti;
 
-if(f_tcp || f_udp)
+if(head != NULL && (f_tcp || f_udp))
 {
 
 	//printf("\nPacket encount ::  Source IP : %u Source Port :%u  Destination IP : %u  Destination Port : %u",ipsource,sport,ipdst,dport);
@@ -2423,6 +2429,7 @@ if(isRequest(ipsource,sport,s))
 				//printf("\n20 packets sip: %u, dip: %u, sport: %u, dport: %u",ipsource,ipdst,sport,dport);
 				s->reqCount = -1; //-1 means already passed to tree and no need to process it Anymore
 				s->resCount = -1;
+				//printf("HERE -_-");
 				printForDT(s);
 			}
 			else if(count < 10 && count!=-1)
@@ -2601,14 +2608,14 @@ if(isRequest(ipsource,sport,s))
 		        //if sessid is already assigned then it needs to be removed from both avl and hash
 		}
 
-		insertToHash(ipsource,ipdst,sport,dport,sessid,p,root1);
+		root1 =insertToHash(ipsource,ipdst,sport,dport,sessid,p,root1);
 		refer(sessid);
 
 
 	   	fprintf(fp,"\n\nSession inserted ::  Source IP : %u Source Port :%u  Destination IP : %u  Destination Port : %u  Sessid : %u Payload: %u ",ipsource,sport,ipdst,dport,sessid,payload_size);           //add cumulative info
 	
 	}
-fclose(fp);
+
 }
 else
 {
@@ -2616,12 +2623,12 @@ else
 
 }
 
+fclose(fp);
 
 
-/*
 	printf("\n\n Hash :");
 	display();
-*/
+
 
 /*****for training tree***/
 /*

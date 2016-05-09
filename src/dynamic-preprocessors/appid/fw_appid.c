@@ -62,7 +62,7 @@
 #include "service_base.h"
 
 /*tanmay*/
-
+#include<time.h>
 #include "appIdSessionstore.c"
 //#include "sort.c"
 #include<errno.h>
@@ -2423,8 +2423,9 @@ if(isRequest(ipsource,sport,s))
 				//printf("\nisRequest!!!!\n");
 			count = s->reqCount;
 			opti = s->reqOptions[count];
-			if(count ==10 && s->resCount==10)
+			if(count ==MAX_REQUESTS_FOR_DT && s->resCount==MAX_REQUESTS_FOR_DT)
 			{
+				s->duration = (s->duration - time(NULL));
 				//print for DT
 				//printf("\n20 packets sip: %u, dip: %u, sport: %u, dport: %u",ipsource,ipdst,sport,dport);
 				s->reqCount = -1; //-1 means already passed to tree and no need to process it Anymore
@@ -2432,7 +2433,7 @@ if(isRequest(ipsource,sport,s))
 				//printf("HERE -_-");
 				printForDT(s);
 			}
-			else if(count < 10 && count!=-1)
+			else if(count < MAX_REQUESTS_FOR_DT && count!=-1)
 			{
 				//printf("\nstop coming here!!!");
 				if(f_tcp)
@@ -2515,15 +2516,16 @@ if(isRequest(ipsource,sport,s))
 				//printf("\nisResponse!!!!\n");
 			count = s->resCount;
 			opti = s->resOptions[count];
-			if(count ==10 && s->reqCount==10)
+			if(count ==MAX_REQUESTS_FOR_DT && s->reqCount==MAX_REQUESTS_FOR_DT)
 			{
+				s->duration = (s->duration - time(NULL));
 				//print
 				//printf("\n20 packets sip: %u, dip: %u, sport: %u, dport: %u",ipsource,ipdst,sport,dport);
 				s->resCount = -1; //-1 means already passed to tree and no need to process it Anymore
 				s->reqCount = -1;
 				printForDT(s);
 			}
-			else if(count < 10 && count!=-1)
+			else if(count < MAX_REQUESTS_FOR_DT && count!=-1)
 			{
 				if(f_tcp)
 				{

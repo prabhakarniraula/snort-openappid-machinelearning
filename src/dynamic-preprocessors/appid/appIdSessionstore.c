@@ -667,7 +667,7 @@ struct node
     uint16_t reqCount, resCount;
     uint8_t reqOptions[MAX_REQUESTS_FOR_DT][10];
     uint8_t resOptions[MAX_REQUESTS_FOR_DT][10];
-
+    uint32_t duration;
     uint16_t sessid,total_packets;
     uint32_t total_bytes;
     struct node *next;
@@ -740,6 +740,7 @@ struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, 
 
 	newnode->reqCount = 1;
 	newnode->resCount = 0;
+	newnode->duration = time(NULL);
 	
 	newnode->reqPacket[0] = p->ip4h->ip_len;
 	newnode->reqPayload[0] = p->payload_size;
@@ -835,6 +836,7 @@ printForDT(struct node *s)
 	int i,j;
 	//int count = 0;
 	FILE *fpDT = fopen("/usr/dt.txt","a");
+	
 	fprintf(fpDT,"%f, %f, ",s->reqPayloadAvg,s->resPayloadAvg);
 	for(i=0;i<10;i++)
 	{
@@ -858,7 +860,9 @@ printForDT(struct node *s)
 	for(i=0;i<10;i++)
 	{
 		fprintf(fpDT,"%u, ",s->resPacket[i]);
+	
 	}
+	fprintf(fpDT,"%u, ",s->duration);
 	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
 	{
 		for(j=0;j<10;j++)
@@ -882,7 +886,7 @@ printForDT(struct node *s)
 	
 	//printf("HERE -_-");
 	//printf("%d",count);	
-	fprintf(fpDT,"app%d\n",time(NULL));
+	fprintf(fpDT,"app%d%d\n",time(NULL),appid);
 	appId++;
 	fclose(fpDT);
 }

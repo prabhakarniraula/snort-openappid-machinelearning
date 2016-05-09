@@ -2500,6 +2500,11 @@ if(isRequest(ipsource,sport,s))
 						opti[loop]=0;
 				}
 				//printf("\n%f ",s->reqPayloadAvg*count);
+				int i;
+				for(i=0;i<MAX_PAYLOAD_BYTES;i++)
+				{
+					s->reqPayloadBytes[count][i] = p->payload[i];
+				}
 				s->reqPayloadAvg = (double)(((double)(s->reqPayloadAvg)*(double)count) + (double)p->payload_size)/((double)(count+1));
 				s->reqPacket[count] = p->ip4h->ip_len;
 				s->reqPayload[count] = p->payload_size;
@@ -2589,6 +2594,11 @@ if(isRequest(ipsource,sport,s))
 					int loop;
 					for(loop=0;loop<MAX_REQUESTS_FOR_DT;loop++)
 						opti[loop]=0;
+				}
+				int i;
+				for(i=0;i<MAX_PAYLOAD_BYTES;i++)
+				{
+					s->resPayloadBytes[count][i] = p->payload[i];
 				}
 				s->resPayloadAvg = (double)(((double)(s->resPayloadAvg)*(double)count) + (double)p->payload_size)/((double)(count+1));
 				s->resPacket[count] = p->ip4h->ip_len;

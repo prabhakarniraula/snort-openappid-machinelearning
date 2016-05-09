@@ -5,6 +5,7 @@
 #include "sort.c"
 
 #define MAX_REQUESTS_FOR_DT 10
+#define MAX_PAYLOAD_BYTES 5
 /*
 	AVL Tree to access socketpair by sessid
 */
@@ -662,6 +663,7 @@ struct node
     uint16_t whichIsSource; //0 for ip1,p1 or 1 otherwise
     uint16_t reqPacket[MAX_REQUESTS_FOR_DT], resPacket[MAX_REQUESTS_FOR_DT];
     uint16_t reqPayload[MAX_REQUESTS_FOR_DT], resPayload[MAX_REQUESTS_FOR_DT];
+    uint8_t reqPayloadBytes[MAX_REQUESTS_FOR_DT][MAX_PAYLOAD_BYTES], resPayloadBytes[MAX_REQUESTS_FOR_DT][MAX_PAYLOAD_BYTES];
     double reqPacketAvg, resPacketAvg;
     double reqPayloadAvg,resPayloadAvg;
     uint16_t reqCount, resCount;
@@ -751,7 +753,11 @@ struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, 
 	newnode->resPayloadAvg = 0;
 
 	//options
-
+	int i;
+	for(i=0;i<MAX_PAYLOAD_BYTES;i++)
+	{
+		newnode->reqPayloadBytes[0][i] = p->payload[i];
+	}
 	uint8_t* opti = newnode->reqOptions[0];
 	if(p->tcp_header != NULL)
 	{
@@ -836,6 +842,7 @@ printForDT(struct node *s)
 	int i,j;
 	//int count = 0;
 	FILE *fpDT = fopen("/usr/dt.txt","a");
+	FILE *tfp = fopen("/usr/apps.txt","a");
 	
 	fprintf(fpDT,"%f, %f, ",s->reqPayloadAvg,s->resPayloadAvg);
 	for(i=0;i<10;i++)
@@ -863,6 +870,22 @@ printForDT(struct node *s)
 	
 	}
 	fprintf(fpDT,"%u, ",s->duration);
+
+	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
+	{
+		for(j=0;j<MAX_PAYLOAD_BYTES;j++)
+		{
+			fprintf(fpDT,"%u, ",s->reqPayloadBytes[i][j]);			
+		}
+	}
+	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
+	{
+		for(j=0;j<MAX_PAYLOAD_BYTES;j++)
+		{
+			fprintf(fpDT,"%u, ",s->resPayloadBytes[i][j]);			
+		}
+	}
+
 	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
 	{
 		for(j=0;j<10;j++)
@@ -886,9 +909,12 @@ printForDT(struct node *s)
 	
 	//printf("HERE -_-");
 	//printf("%d",count);	
-	fprintf(fpDT,"app%d%d\n",time(NULL),appid);
+	//fprintf(fpDT,"app%d%d\n",time(NULL),appid);
+	fprintf(fpDT,"app%d\n",appId);
+	fprintf(tfp,"app%d, ",appId);
 	appId++;
 	fclose(fpDT);
+	fclose(tfp);
 }
 
 /* find sessid by socketpair in hash */

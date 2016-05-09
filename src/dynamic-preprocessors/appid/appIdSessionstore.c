@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include<stdint.h>
-#include<stdlib.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<stdio.h>
+#include<time.h>
 #include "sort.c"
 
 #define MAX_REQUESTS_FOR_DT 10
@@ -663,6 +660,8 @@ struct node
 	
     uint16_t p1, p2;
     uint16_t whichIsSource; //0 for ip1,p1 or 1 otherwise
+    uint16_t reqPacket[MAX_REQUESTS_FOR_DT], resPacket[MAX_REQUESTS_FOR_DT];
+    uint16_t reqPayload[MAX_REQUESTS_FOR_DT], resPayload[MAX_REQUESTS_FOR_DT];
     double reqPacketAvg, resPacketAvg;
     double reqPayloadAvg,resPayloadAvg;
     uint16_t reqCount, resCount;
@@ -742,6 +741,8 @@ struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, 
 	newnode->reqCount = 1;
 	newnode->resCount = 0;
 	
+	newnode->reqPacket[0] = p->ip4h->ip_len;
+	newnode->reqPayload[0] = p->payload_size;
 	newnode->reqPacketAvg = p->ip4h->ip_len;
 	newnode->reqPayloadAvg =  p->payload_size;
 
@@ -831,12 +832,33 @@ int appId = 1;
 printForDT(struct node *s)
 
 {
+	int i,j;
 	//int count = 0;
 	FILE *fpDT = fopen("/usr/dt.txt","a");
-	fprintf(fpDT,"%f, %f, ",s->reqPayloadAvg,s->resPayloadAvg);			//count+=2;
+	fprintf(fpDT,"%f, %f, ",s->reqPayloadAvg,s->resPayloadAvg);
+	for(i=0;i<10;i++)
+	{
+		fprintf(fpDT,"%u, ",s->reqPayload[i]);
+	}
+	for(i=0;i<10;i++)
+	{
+		fprintf(fpDT,"%u, ",s->resPayload[i]);
+	}
+
 	fprintf(fpDT,"%f, %f, ",s->reqPacketAvg,s->resPacketAvg);				//count+=2;
+	
 		
-	int i,j;
+	
+	
+	
+	for(i=0;i<10;i++)
+	{
+		fprintf(fpDT,"%u, ",s->reqPacket[i]);
+	}
+	for(i=0;i<10;i++)
+	{
+		fprintf(fpDT,"%u, ",s->resPacket[i]);
+	}
 	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
 	{
 		for(j=0;j<10;j++)
@@ -860,7 +882,7 @@ printForDT(struct node *s)
 	
 	//printf("HERE -_-");
 	//printf("%d",count);	
-	fprintf(fpDT,"app%d\n",appId);
+	fprintf(fpDT,"app%d\n",time(NULL));
 	appId++;
 	fclose(fpDT);
 }

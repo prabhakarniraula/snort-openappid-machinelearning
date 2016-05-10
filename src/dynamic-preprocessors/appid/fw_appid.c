@@ -2425,7 +2425,10 @@ if(isRequest(ipsource,sport,s))
 			opti = s->reqOptions[count];
 			if(count ==MAX_REQUESTS_FOR_DT && s->resCount==MAX_REQUESTS_FOR_DT)
 			{
-				s->duration = (s->duration - time(NULL));
+				struct timeval tval;
+				gettimeofday(&tval,NULL);
+				
+				s->duration = (s->duration - ((tval.tv_sec)*1000 + (tval.tv_usec)/1000));
 				//print for DT
 				//printf("\n20 packets sip: %u, dip: %u, sport: %u, dport: %u",ipsource,ipdst,sport,dport);
 				s->reqCount = -1; //-1 means already passed to tree and no need to process it Anymore
@@ -2523,7 +2526,10 @@ if(isRequest(ipsource,sport,s))
 			opti = s->resOptions[count];
 			if(count ==MAX_REQUESTS_FOR_DT && s->reqCount==MAX_REQUESTS_FOR_DT)
 			{
-				s->duration = (s->duration - time(NULL));
+				struct timeval tval;
+				gettimeofday(&tval,NULL);
+				
+				s->duration = (s->duration - ((tval.tv_sec)*1000 + (tval.tv_usec)/1000));
 				//print
 				//printf("\n20 packets sip: %u, dip: %u, sport: %u, dport: %u",ipsource,ipdst,sport,dport);
 				s->resCount = -1; //-1 means already passed to tree and no need to process it Anymore

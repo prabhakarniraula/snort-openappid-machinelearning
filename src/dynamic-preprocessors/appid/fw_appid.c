@@ -2422,7 +2422,8 @@ if(isRequest(ipsource,sport,s))
 		{
 				//printf("\nisRequest!!!!\n");
 			count = s->reqCount;
-			opti = s->reqOptions[count];
+			/*TCP_OPTIONS*/
+			//opti = s->reqOptions[count];
 			if(count ==MAX_REQUESTS_FOR_DT && s->resCount==MAX_REQUESTS_FOR_DT)
 			{
 				struct timeval tval;
@@ -2439,7 +2440,8 @@ if(isRequest(ipsource,sport,s))
 			else if(count < MAX_REQUESTS_FOR_DT && count!=-1)
 			{
 				//printf("\nstop coming here!!!");
-				if(f_tcp)
+				/*TCP_OPTIONS*/
+/*				if(f_tcp)
 				{
 					opt = p->tcp_options;
 					sort(opt,tcpoptionscount);
@@ -2502,6 +2504,7 @@ if(isRequest(ipsource,sport,s))
 					for(loop=0;loop<MAX_TCP_OPTIONS;loop++)
 						opti[loop]=0;
 				}
+*/
 				//printf("\n%f ",s->reqPayloadAvg*count);
 				int i;
 				for(i=0;i<MAX_PAYLOAD_BYTES;i++)
@@ -2523,7 +2526,8 @@ if(isRequest(ipsource,sport,s))
 		{
 				//printf("\nisResponse!!!!\n");
 			count = s->resCount;
-			opti = s->resOptions[count];
+			/*TCP_OPTIONS*/
+			//opti = s->resOptions[count];
 			if(count ==MAX_REQUESTS_FOR_DT && s->reqCount==MAX_REQUESTS_FOR_DT)
 			{
 				struct timeval tval;
@@ -2538,7 +2542,9 @@ if(isRequest(ipsource,sport,s))
 			}
 			else if(count < MAX_REQUESTS_FOR_DT && count!=-1)
 			{
-				if(f_tcp)
+				/*TCP_OPTIONS*/
+
+/*				if(f_tcp)
 				{
 					opt = p->tcp_options;
 					sort(opt,tcpoptionscount);
@@ -2601,6 +2607,7 @@ if(isRequest(ipsource,sport,s))
 					for(loop=0;loop<MAX_TCP_OPTIONS;loop++)
 						opti[loop]=0;
 				}
+*/
 				int i;
 				for(i=0;i<MAX_PAYLOAD_BYTES;i++)
 				{

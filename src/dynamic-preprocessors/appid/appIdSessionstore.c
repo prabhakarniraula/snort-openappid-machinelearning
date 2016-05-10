@@ -826,7 +826,7 @@ struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, 
 	else
 	{
 		int loop;
-		for(loop=0;loop<10;loop++)
+		for(loop=0;loop<MAX_TCP_OPTIONS;loop++)
 			opti[loop]=0;
 	}
 

@@ -4,8 +4,10 @@
 #include<time.h>
 #include "sort.c"
 
-#define MAX_REQUESTS_FOR_DT 10
-#define MAX_PAYLOAD_BYTES 5
+#define MAX_REQUESTS_FOR_DT 25
+#define MAX_PAYLOAD_BYTES 10
+#define MAX_TCP_OPTIONS 10
+
 /*
 	AVL Tree to access socketpair by sessid
 */
@@ -667,8 +669,8 @@ struct node
     double reqPacketAvg, resPacketAvg;
     double reqPayloadAvg,resPayloadAvg;
     uint16_t reqCount, resCount;
-    uint8_t reqOptions[MAX_REQUESTS_FOR_DT][10];
-    uint8_t resOptions[MAX_REQUESTS_FOR_DT][10];
+    uint8_t reqOptions[MAX_REQUESTS_FOR_DT][MAX_TCP_OPTIONS];
+    uint8_t resOptions[MAX_REQUESTS_FOR_DT][MAX_TCP_OPTIONS];
     uint32_t duration;
     uint16_t sessid,total_packets;
     uint32_t total_bytes;
@@ -845,11 +847,11 @@ printForDT(struct node *s)
 	FILE *tfp = fopen("/usr/apps.txt","a");
 	
 	fprintf(fpDT,"%f, %f, ",s->reqPayloadAvg,s->resPayloadAvg);
-	for(i=0;i<10;i++)
+	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
 	{
 		fprintf(fpDT,"%u, ",s->reqPayload[i]);
 	}
-	for(i=0;i<10;i++)
+	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
 	{
 		fprintf(fpDT,"%u, ",s->resPayload[i]);
 	}
@@ -888,19 +890,19 @@ printForDT(struct node *s)
 
 	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
 	{
-		for(j=0;j<10;j++)
+		for(j=0;j<MAX_TCP_OPTIONS;j++)
 		{
 			fprintf(fpDT,"%u, ",s->reqOptions[i][j]);			//count++;
 		}
 	}
 	for(i=0;i<MAX_REQUESTS_FOR_DT-1;i++)
 	{
-		for(j=0;j<10;j++) // 9 because print last without comma
+		for(j=0;j<MAX_TCP_OPTIONS;j++) // 9 because print last without comma
 		{
 			fprintf(fpDT,"%u, ",s->resOptions[i][j]);			//count++;
 		}
 	}
-	for(j=0;j<9;j++)
+	for(j=0;j<MAX_TCP_OPTIONS-1;j++)
 	{
 		fprintf(fpDT,"%u, ",s->resOptions[9][j]);					//count++;
 	}

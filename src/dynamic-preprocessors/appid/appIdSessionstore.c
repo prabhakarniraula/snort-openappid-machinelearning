@@ -671,7 +671,7 @@ struct node
     uint16_t reqCount, resCount;
     uint8_t reqOptions[MAX_REQUESTS_FOR_DT][MAX_TCP_OPTIONS];
     uint8_t resOptions[MAX_REQUESTS_FOR_DT][MAX_TCP_OPTIONS];
-    uint32_t duration;
+    uint64_t duration;
     uint16_t sessid,total_packets;
     uint32_t total_bytes;
     struct node *next;
@@ -744,7 +744,9 @@ struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, 
 
 	newnode->reqCount = 1;
 	newnode->resCount = 0;
-	newnode->duration = time(NULL);
+	struct timeval tval;
+	gettimeofday(&tval,NULL);
+	newnode->duration = (tval.tv_sec)*1000 + (tval.tv_usec)/1000;
 	
 	newnode->reqPacket[0] = p->ip4h->ip_len;
 	newnode->reqPayload[0] = p->payload_size;

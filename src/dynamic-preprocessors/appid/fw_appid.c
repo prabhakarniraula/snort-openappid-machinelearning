@@ -2496,7 +2496,7 @@ if(isRequest(ipsource,sport,s))
 				else
 				{
 					int loop;
-					for(loop=0;loop<MAX_REQUESTS_FOR_DT;loop++)
+					for(loop=0;loop<MAX_TCP_OPTIONS;loop++)
 						opti[loop]=0;
 				}
 				//printf("\n%f ",s->reqPayloadAvg*count);
@@ -2592,7 +2592,7 @@ if(isRequest(ipsource,sport,s))
 				else
 				{
 					int loop;
-					for(loop=0;loop<MAX_REQUESTS_FOR_DT;loop++)
+					for(loop=0;loop<MAX_TCP_OPTIONS;loop++)
 						opti[loop]=0;
 				}
 				int i;

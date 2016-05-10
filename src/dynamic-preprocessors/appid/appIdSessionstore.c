@@ -669,8 +669,9 @@ struct node
     double reqPacketAvg, resPacketAvg;
     double reqPayloadAvg,resPayloadAvg;
     uint16_t reqCount, resCount;
-    uint8_t reqOptions[MAX_REQUESTS_FOR_DT][MAX_TCP_OPTIONS];
-    uint8_t resOptions[MAX_REQUESTS_FOR_DT][MAX_TCP_OPTIONS];
+	/*TCP_OPTIONS*/
+   // uint8_t reqOptions[MAX_REQUESTS_FOR_DT][MAX_TCP_OPTIONS];
+   // uint8_t resOptions[MAX_REQUESTS_FOR_DT][MAX_TCP_OPTIONS];
     uint64_t duration;
     uint16_t sessid,total_packets;
     uint32_t total_bytes;
@@ -756,13 +757,14 @@ struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, 
 	newnode->resPacketAvg = 0;
 	newnode->resPayloadAvg = 0;
 
-	//options
+	
 	int i;
 	for(i=0;i<MAX_PAYLOAD_BYTES;i++)
 	{
 		newnode->reqPayloadBytes[0][i] = p->payload[i];
 	}
-	uint8_t* opti = newnode->reqOptions[0];
+	/*TCP_OPTIONS*/
+/*	uint8_t* opti = newnode->reqOptions[0];
 	if(p->tcp_header != NULL)
 	{
 		TCPOptions *opt=NULL;
@@ -832,7 +834,7 @@ struct node * createhNode(uint32_t ip1, uint32_t ip2, uint16_t p1, uint16_t p2, 
 			opti[loop]=0;
 	}
 
-
+*/
 	//strcpy(newnode->name, name);
     newnode->next = NULL;
     return newnode;
@@ -889,8 +891,8 @@ printForDT(struct node *s)
 			fprintf(fpDT,"%u, ",s->resPayloadBytes[i][j]);			
 		}
 	}
-
-	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
+	/*TCP_OPTIONS*/
+/*	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
 	{
 		for(j=0;j<MAX_TCP_OPTIONS;j++)
 		{
@@ -909,7 +911,7 @@ printForDT(struct node *s)
 		fprintf(fpDT,"%u, ",s->resOptions[9][j]);					//count++;
 	}
 	fprintf(fpDT,"%u, ",s->resOptions[9][9]);						//count++;	
-	
+*/	
 	
 	//printf("HERE -_-");
 	//printf("%d",count);	

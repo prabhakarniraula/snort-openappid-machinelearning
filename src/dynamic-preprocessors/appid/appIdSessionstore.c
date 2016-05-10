@@ -862,11 +862,11 @@ printForDT(struct node *s)
 	
 	
 	
-	for(i=0;i<10;i++)
+	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
 	{
 		fprintf(fpDT,"%u, ",s->reqPacket[i]);
 	}
-	for(i=0;i<10;i++)
+	for(i=0;i<MAX_REQUESTS_FOR_DT;i++)
 	{
 		fprintf(fpDT,"%u, ",s->resPacket[i]);
 	
